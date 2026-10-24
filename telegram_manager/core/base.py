@@ -64,7 +64,12 @@ class ManagerBase:
         self._sent_log: dict[int, list[dict[str, Any]]] = {}
 
     # --- telethon client helpers ---------------------------------------------------
-    def _new_client(self, session_string: str, api_id: int, api_hash: str) -> TelegramClient:
+    def _new_client(self, session_string: str, api_id: int, api_hash: str, proxy: dict[str, Any] | None = None) -> TelegramClient:
+        extra: dict[str, Any] = {}
+        if proxy:  # a plain proxy dict (core/proxyparse.py); needs python-socks for socks / http
+            from telegram_manager.core.proxyparse import telethon_kwargs
+
+            extra = telethon_kwargs(proxy)
         client = TelegramClient(
             StringSession(session_string),
             api_id,
@@ -74,6 +79,7 @@ class ManagerBase:
             connection_retries=-1,
             retry_delay=3,
             auto_reconnect=True,
+            **extra,
         )
         # Telethon parses Markdown by default; everything we send must go out exactly as typed.
         client.parse_mode = None
