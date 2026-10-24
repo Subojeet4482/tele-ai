@@ -52,8 +52,8 @@ class ThinkingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class KeyboardAndPromptTests(unittest.TestCase):
-    def test_ai_mode_keyboard_is_only_the_menu_button(self):
-        self.assertEqual([[item.key for item in row] for row in reply_menu.AI_LAYOUT], [["menu"]])
+    def test_ai_mode_keyboard_is_the_menu_and_the_instant_switch_to_manual(self):
+        self.assertEqual([[item.key for item in row] for row in reply_menu.AI_LAYOUT], [["menu", "to_manual"]])
 
     def test_taps_on_the_old_ai_keyboard_still_work(self):
         for label in ("⚙️ AI Settings", "🔑 AI Keys", "🧹 Nayi Baat", "🖐 Manual Mode"):
