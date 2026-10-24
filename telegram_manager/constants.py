@@ -16,7 +16,7 @@ BOT_START_WAIT = 20  # seconds to wait for a bot to answer /start
 BOT_START_AFTER_CLICK_WAIT = 8  # seconds to wait for the bot's answer after 'Verify' / a second /start
 BOT_START_SETTLE = 1.5  # a bot often sends two messages: look again a moment after the first one
 BOT_START_ROUNDS = 3  # how often 'join first, then verify' is repeated before giving up
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # a photo the admin sends to the AI
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # a file the admin sends to the AI (a bot cannot download more than 20 MB)
 UPLOAD_TTL_SECONDS = 3600  # an uploaded photo is forgotten after an hour
 
 # --- timed messages ("send in N minutes") -------------------------------------
@@ -73,3 +73,9 @@ USERNAME_MAX = 32
 # --- export notifications + multi-session export ------------------------------------
 EXPORT_NOTIFY_TTL = 600  # seconds the owner/admin can still tap Revoke after a public export
 EXPORT_FILE_AUTODELETE = 60  # a .txt session export deletes itself after this many seconds
+
+# --- proxies handed out + temp mail ---------------------------------------------------------------------------------
+PROXY_INLINE_MAX = 20  # up to this many proxies are sent as a chat message; more than this comes as a .txt file
+PROXY_GIVE_DEFAULT = 10  # /getproxy with no number
+TEMPMAIL_POLL_ROUNDS = 3  # times the inbox is looked at when 📥 Get is tapped and nothing has arrived yet
+TEMPMAIL_POLL_GAP = 4  # seconds between those looks
