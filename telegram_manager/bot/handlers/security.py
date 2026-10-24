@@ -33,6 +33,7 @@ def settings_keyboard(is_owner: bool):
         [Btn("🩺 Health check (all)", callback_data="sec|check"), Btn("🔄 Refresh names", callback_data="acc_refresh")],
         [Btn("🎨 Start screen", callback_data="sc|home"), Btn("🎁 Give accounts", callback_data="give|start")],
         [Btn("📤 Export session", callback_data="exp|pick"), Btn("🔗 Connect account", callback_data="connect")],
+        [Btn("🌐 Proxies", callback_data="px|home"), Btn("📧 Temp Mail", callback_data="tm|home")],
     ]
     if is_owner:
         rows.append([Btn("👑 Admins", callback_data="adm|home"), Btn("📜 Live logs", callback_data="logs|link")])
