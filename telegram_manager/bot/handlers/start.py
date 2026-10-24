@@ -22,7 +22,7 @@ PUBLIC_DEFAULT = (
 
 COMMANDS = (
     "/menu /list /refresh /all /alll /multi /click /allblock /broadcast /message "
-    "/usermessage /botmessage /channelmessage /send /unsend /delchat /whois /setapi /import /ai /aichats /aisettings /settings /security /channels /give /export /startscreen /keyboard /help /cancel"
+    "/usermessage /botmessage /channelmessage /send /unsend /delchat /whois /setapi /import /ai /aichats /aisettings /settings /security /channels /give /export /startscreen /proxy /getproxy /proxyurl /tempmail /aimode /manual /keyboard /help /cancel"
 )
 
 
