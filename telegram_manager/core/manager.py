@@ -5,7 +5,10 @@ from telegram_manager.core.accountctl import AccountControlMixin
 from telegram_manager.core.accounts import AccountsMixin
 from telegram_manager.core.autoclick import AutoClickMixin
 from telegram_manager.core.base import ManagerBase
+from telegram_manager.core.actions import ActionsMixin
 from telegram_manager.core.control import ControlMixin
+from telegram_manager.core.proxy import ProxyMixin
+from telegram_manager.core.proxysource import ProxySourceMixin
 from telegram_manager.core.dialogs import DialogsMixin
 from telegram_manager.core.extras import ExtrasMixin
 from telegram_manager.core.forwarding import ForwardingMixin
@@ -38,6 +41,9 @@ class TelethonManager(
     AutoClickMixin,
     JoinerMixin,
     ControlMixin,
+    ActionsMixin,
+    ProxyMixin,
+    ProxySourceMixin,
     ProfileMixin,
     SecurityMixin,
     ForwardingMixin,
