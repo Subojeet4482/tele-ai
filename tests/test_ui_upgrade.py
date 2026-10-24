@@ -24,7 +24,9 @@ class ReplyKeyboardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(rows[0]), 1)
         self.assertEqual(rows[0][0].text, "🔗 Connect Account")
         self.assertEqual(rows[0][0].api_kwargs, {"style": "success"})
-        self.assertTrue(all(len(row) == 2 for row in rows[1:]))
+        self.assertTrue(all(len(row) == 2 for row in rows[1:-1]))
+        self.assertEqual([b.text for b in rows[-1]], ["🤖 AI Mode"])  # the instant switch: one wide button at the very bottom
+        self.assertEqual(rows[-1][0].api_kwargs, {"style": "success"})
         logout = next(b for row in rows for b in row if "Logout" in b.text)
         self.assertEqual(logout.api_kwargs, {"style": "danger"})
 
