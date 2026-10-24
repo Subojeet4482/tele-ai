@@ -117,13 +117,13 @@ async def _account_info(ctx, data) -> dict:
 # --- a picture the admin uploaded -----------------------------------------------------------------------------
 async def _prep_profile_photo(ctx, args) -> Prepared:
     accounts = await resolve_accounts(ctx, args.get("accounts"))
-    item = media.need(ctx.context.user_data)
+    item = media.need_photo(ctx.context.user_data)
     return Prepared(f"🖼 Set the uploaded picture ({len(item['data']) // 1024} KB) as the profile photo of {len(accounts)} account(s): {labels(accounts)}",
                     {"accounts": _ids(accounts), "media_id": item["id"]})
 
 
 async def _profile_photo(ctx, data) -> dict:
-    item = media.need(ctx.context.user_data)
+    item = media.need_photo(ctx.context.user_data)
     if item["id"] != data["media_id"]:
         raise ValueError("The picture was replaced meanwhile: ask the admin again.")
     return _bulk_message("🖼 Profile photo changed", await ctx.manager.set_profile_photo_selected(ctx.owner_id, data["accounts"], item["data"]))
@@ -135,21 +135,21 @@ async def _prep_send_photo(ctx, args) -> Prepared:
     item = media.need(ctx.context.user_data)
     caption = str(args.get("caption") or item["caption"] or "").strip()[:1000]
     delay = max(OPEN_CHAT_MIN_DELAY, min(int(args.get("delay_seconds") or 5), BULK_DELAY_MAX))
-    as_file = bool(args.get("as_file")) or item["as_file"]
+    kind = "document" if item["kind"] == "photo" and (args.get("as_file") or item["as_file"]) else item["kind"]
     return Prepared(
-        f"🖼 Send the uploaded picture to {target} from {len(accounts)} account(s) ({labels(accounts)}), {delay}s apart"
+        f"🖼 Send the uploaded {kind} to {target} from {len(accounts)} account(s) ({labels(accounts)}), {delay}s apart"
         + (f":\n“{caption[:80]}”" if caption else ""),
-        {"accounts": _ids(accounts), "target": target, "caption": caption, "delay": delay, "as_file": as_file, "media_id": item["id"]},
+        {"accounts": _ids(accounts), "target": target, "caption": caption, "delay": delay, "kind": kind, "media_id": item["id"]},
     )
 
 
 async def _send_photo(ctx, data) -> dict:
     item = media.need(ctx.context.user_data)
     if item["id"] != data["media_id"]:
-        raise ValueError("The picture was replaced meanwhile: ask the admin again.")
-    result = await ctx.manager.send_photo_selected(
-        ctx.owner_id, data["accounts"], data["target"], item["data"], data["caption"], data["delay"], item["name"], data["as_file"])
-    return _bulk_message(f"🖼 Picture sent to {data['target']}", result)
+        raise ValueError("The file was replaced meanwhile: ask the admin again.")
+    result = await ctx.manager.send_media_selected(
+        ctx.owner_id, data["accounts"], data["target"], item["data"], data["caption"], data["delay"], item["name"], data["kind"])
+    return _bulk_message(f"🖼 Sent to {data['target']}", result)
 
 
 # --- chats: seen, mute, archive -------------------------------------------------------------------------------
@@ -203,8 +203,8 @@ TOOLS: list[Tool] = [
          "Put the picture the admin uploaded to this chat as the profile photo of the named accounts. If no picture is waiting, ask the admin to send one here.",
          _obj({"accounts": _ACCOUNTS}, ["accounts"]), _prep_profile_photo, _profile_photo, risky=True),
     Tool("send_photo",
-         "Send the picture the admin uploaded to this chat to a user / group / channel (@username, link or id) from the named accounts, optional caption. "
-         "as_file=true sends it uncompressed. If no picture is waiting, ask the admin to send one here.",
+         "Send the picture / video / voice message / audio / file the admin uploaded to this chat to a user / group / channel (@username, link or id) from the named "
+         "accounts, optional caption. as_file=true sends a picture uncompressed as a file. If nothing is waiting, ask the admin to send it here first.",
          _obj({"accounts": _ACCOUNTS, "target": _STR, "caption": _STR, "as_file": {"type": "boolean"}, "delay_seconds": {"type": "integer"}},
               ["accounts", "target"]),
          _prep_send_photo, _send_photo, risky=True),
