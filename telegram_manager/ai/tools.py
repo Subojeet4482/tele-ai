@@ -64,6 +64,8 @@ class Outcome:
     choices: list[tuple[str, str]] = field(default_factory=list)  # (button label, callback data)
     choices_title: str = "Kaunsa?"
     display: list[str] = field(default_factory=list)  # ready-made blocks (a list of accounts) sent to the admin as they are
+    html: list[str] = field(default_factory=list)  # like display, but HTML (a proxy list in <pre>, a temp-mail OTP): the caller escapes
+    files: list[tuple[str, bytes, str]] = field(default_factory=list)  # (file name, content, HTML caption) sent to the admin as a document
     notes: list[str] = field(default_factory=list)  # one-line facts kept in the AI's memory ("showed accounts 1,4,5")
     questions: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (question, token, option labels)
     wizard: str | None = None  # a step-by-step flow to start (adding an account, the 2-step password form)
@@ -1123,7 +1125,7 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
          _prep_check, _check_accounts, risky=True),
     Tool("panel_guide",
          "Read your own manual about this bot for one topic before doing something big or unusual. "
-         "Topics: accounts, sending, broadcasts, forwarding, ai_chats, health, admins, start_screen, modes, security, channels, bots_media.",
+         "Topics: accounts, sending, broadcasts, forwarding, ai_chats, health, admins, start_screen, modes, security, channels, bots_media, proxies, actions.",
          _obj({"topic": _STR}, ["topic"]), _prep_guide, _panel_guide),
     Tool("read_chat", "Read the latest messages of one chat on one account.",
          _obj({"account": _STR, "chat": {"type": "string", "description": "@username or numeric chat id"}, "limit": _INT}, ["account", "chat"]),
@@ -1288,3 +1290,15 @@ TOOLS.update({tool.name: tool for tool in _security_tools.TOOLS})
 from telegram_manager.ai import control_tools as _control_tools  # noqa: E402
 
 TOOLS.update({tool.name: tool for tool in _control_tools.TOOLS})
+
+from telegram_manager.ai import proxy_tools as _proxy_tools  # noqa: E402
+
+TOOLS.update({tool.name: tool for tool in _proxy_tools.TOOLS})
+
+from telegram_manager.ai import util_tools as _util_tools  # noqa: E402
+
+TOOLS.update({tool.name: tool for tool in _util_tools.TOOLS})
+
+from telegram_manager.ai import action_tools as _action_tools  # noqa: E402
+
+TOOLS.update({tool.name: tool for tool in _action_tools.TOOLS})
