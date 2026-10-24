@@ -246,6 +246,7 @@ class AIHandlers(HandlerBase):
     async def _present(self, update, context, result, settings: AISettings) -> None:
         message = update.effective_message
         await self._show_blocks(update, result.outcome)  # a list of accounts, printed as it is, before the AI's comment
+        await self._show_html_and_files(update, result.outcome)  # proxies, a temp-mail OTP, a .txt file
         if result.text:
             await message.reply_text(result.text[:4000])
         for token, summary in result.outcome.pending:
@@ -265,6 +266,14 @@ class AIHandlers(HandlerBase):
                 answers["api_id"], answers["api_hash"] = saved
             answers.update(result.outcome.wizard_answers)
             await self.engine.start(update, context, result.outcome.wizard, answers)
+
+    @staticmethod
+    async def _show_html_and_files(update, outcome) -> None:
+        message = update.effective_message
+        for block in outcome.html:
+            await message.reply_text(block[:4096], parse_mode="HTML")
+        for name, data, caption in outcome.files:
+            await message.reply_document(document=data, filename=name, caption=caption[:1024], parse_mode="HTML")
 
     @staticmethod
     async def _show_blocks(update, outcome) -> None:
