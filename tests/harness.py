@@ -135,12 +135,21 @@ class Harness:
             "ai": p.ai.ai_command, "aisettings": p.ai.settings_command, "aichats": p.ai.chats_command, "aiclear": p.ai.clear_command,
             "settings": p.security.settings_command, "security": p.security.security_command,
             "channels": p.security.channels_command,
+            "proxy": p.utils.proxy_command, "getproxy": p.utils.getproxy_command, "proxyurl": p.utils.proxyurl_command,
+            "tempmail": p.utils.tempmail_command,
+            "aimode": self._mode_handler("ai"), "manual": self._mode_handler("manual"),
         }
         for kind in ("all", "alll", "allblock", "click"):
             handlers[kind] = self._bulk_handler("block" if kind == "allblock" else kind)
         for command, key in (("usermessage", "u"), ("botmessage", "b"), ("channelmessage", "c")):
             handlers[command] = self._switch_handler(key)
         return await self._run(user_id, FakeUpdate(user_id, text=text), handlers[name])
+
+    def _mode_handler(self, mode):
+        async def handler(update, context):
+            await self.parts.utils.switch_command(update, context, mode)
+
+        return handler
 
     def _bulk_handler(self, kind):
         async def handler(update, context):
@@ -168,6 +177,7 @@ class Harness:
             "mode": p.start.mode_button, "aiq": p.ai.question_button,
             "ai": p.ai.settings_button, "aia": p.ai.approval_button, "aib": p.ai.broadcast_button, "aic": p.ai.chat_button,
             "sec": p.security.sec_button, "sch": p.security.sch_button,
+            "px": p.utils.proxy_button, "tm": p.utils.tm_button,
         }
         special = {
             "fw|home": p.forwarding.home, "fw|accs": p.forwarding.account_picker, "msg|start": p.commands.message_button,
