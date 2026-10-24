@@ -30,6 +30,7 @@ from telegram_manager.bot.flows.profile import build_profile_specs
 from telegram_manager.bot.flows.schedule import build_schedule_spec
 from telegram_manager.bot.flows.security import build_security_specs
 from telegram_manager.bot.flows.startcfg import build_startcfg_specs
+from telegram_manager.bot.flows.utilities import build_utility_specs
 from telegram_manager.bot.guard import Guard
 from telegram_manager.ai.conversation import Conversations
 from telegram_manager.ai.gemini import GeminiClient
@@ -46,6 +47,7 @@ from telegram_manager.bot.handlers.logs import LogsHandlers
 from telegram_manager.bot.handlers.schedule import ScheduleHandlers
 from telegram_manager.bot.handlers.start import StartHandlers
 from telegram_manager.bot.handlers.text import TextHandlers
+from telegram_manager.bot.handlers.utilities import UtilityHandlers
 from telegram_manager.bot.lifecycle import post_init, post_shutdown
 from telegram_manager.bot.middleware import Middleware
 from telegram_manager.bot.wizard.engine import WizardEngine
@@ -57,6 +59,13 @@ from telegram_manager.store import Store
 def _bulk(commands: CommandHandlers, kind: str):
     async def handler(update, context) -> None:
         await commands.bulk_command(update, context, kind)
+
+    return handler
+
+
+def _mode_command(utils: UtilityHandlers, mode: str):
+    async def handler(update, context) -> None:
+        await utils.switch_command(update, context, mode)
 
     return handler
 
@@ -82,6 +91,7 @@ class Components:
     ai: AIHandlers
     security: SecurityHandlers
     logs: LogsHandlers
+    utils: UtilityHandlers
     text: TextHandlers
     middleware: Middleware
     menu: reply_menu.MenuButtons
@@ -102,6 +112,7 @@ def wire(deps: Deps) -> Components:
         *build_export_specs(deps),
         *build_startcfg_specs(deps),
         *build_security_specs(deps),
+        *build_utility_specs(deps),
     )
     if deps.chats is None:  # the AI's private chats listen to every account's incoming messages
         deps.chats = Conversations(deps)
@@ -119,13 +130,16 @@ def wire(deps: Deps) -> Components:
         ai=AIHandlers(deps, engine),
         security=SecurityHandlers(deps, engine),
         logs=LogsHandlers(deps, engine),
+        utils=UtilityHandlers(deps, engine),
         text=TextHandlers(deps, engine),
         middleware=Middleware(deps, engine),
         menu=None,
     )
     parts.menu = reply_menu.MenuButtons(deps, engine, parts)
+    parts.extras.ai = parts.ai  # a file sent outside any flow is kept for the AI
     parts.text.ai = parts.ai  # plain messages go to the AI (unless the admin picked Manual mode)
     parts.start.ai = parts.ai  # AI mode's home screen
+    parts.utils.start = parts.start  # /aimode and /manual
     # Where Back / Cancel lead from inside a flow.
     engine.screens = {
         "home": parts.start.home_screen,
@@ -138,6 +152,7 @@ def wire(deps: Deps) -> Components:
         "set|home": lambda update, context=None: parts.security.settings_screen(update),
         "sec|home": lambda update, context=None: parts.security.security_picker(update),
         "sch|home": lambda update, context=None: parts.security._channel_picker(update),
+        "px|home": lambda update, context=None: parts.utils.hub_screen(update, context),
     }
     return parts
 
@@ -189,6 +204,7 @@ def build_application(settings, log_buffer=None, log_access=None, health=None) -
     start, accounts, forwarding = parts.start, parts.accounts, parts.forwarding
     commands, schedule, admins, logs, text = parts.commands, parts.schedule, parts.admins, parts.logs, parts.text
     control, extras, ai, security = parts.control, parts.extras, parts.ai, parts.security
+    utils = parts.utils
     engine = parts.engine
 
     for name, callback in (
@@ -231,6 +247,12 @@ def build_application(settings, log_buffer=None, log_access=None, health=None) -
         ("settings", security.settings_command),
         ("security", security.security_command),
         ("channels", security.channels_command),
+        ("proxy", utils.proxy_command),
+        ("getproxy", utils.getproxy_command),
+        ("proxyurl", utils.proxyurl_command),
+        ("tempmail", utils.tempmail_command),
+        ("aimode", _mode_command(utils, "ai")),
+        ("manual", _mode_command(utils, "manual")),
     ):
         application.add_handler(CommandHandler(name, callback))
 
@@ -277,6 +299,8 @@ def build_application(settings, log_buffer=None, log_access=None, health=None) -
         (r"^set\|home$", security.settings_command),
         (r"^sec\|", security.sec_button),
         (r"^sch\|", security.sch_button),
+        (r"^px\|", utils.proxy_button),
+        (r"^tm\|", utils.tm_button),
         (r"^aiq\|", ai.question_button),
         (r"^ai\|", ai.settings_button),
         (r"^aia\|", ai.approval_button),
@@ -294,7 +318,7 @@ def build_application(settings, log_buffer=None, log_access=None, health=None) -
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text.text_input))
     application.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, text.photo_input))
     application.add_handler(MessageHandler(filters.Document.ALL, extras.txt_input))
-    application.add_handler(MessageHandler(filters.ANIMATION | filters.VIDEO, text.media_input))
+    application.add_handler(MessageHandler(filters.ANIMATION | filters.VIDEO | filters.VIDEO_NOTE | filters.VOICE | filters.AUDIO, text.media_input))
     application.add_handler(MessageReactionHandler(text.on_reaction))
     return application
 
