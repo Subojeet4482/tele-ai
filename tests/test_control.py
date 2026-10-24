@@ -282,7 +282,7 @@ class PictureTests(FlowCase):
         fake = self.gemini(call("set_profile_photo", accounts=["Rahul"]), say("Ijazat chahiye."))
         update = await h.say(OWNER, "Rahul ka profile photo ye lagao")
         self.assertIn("system", fake.requests[0])
-        self.assertIn("UPLOADED PICTURE", fake.requests[0]["system"])
+        self.assertIn("UPLOADED FILE", fake.requests[0]["system"])
         self.assertEqual(changes, [])
         done = await h.tap(OWNER, f"aia|ok|{_token(update.effective_message.replies[-1][1])}")
         self.assertEqual(changes, [(self.a["id"], OWNER, b"JPEGDATA")])
@@ -293,22 +293,22 @@ class PictureTests(FlowCase):
         fake = self.gemini(call("set_profile_photo", accounts=["Rahul"]), say("Pehle photo bhejo."))
         await h.say(OWNER, "profile photo lagao")
         answer = json.dumps(fake.requests[1]["contents"][-1])
-        self.assertIn("Koi photo nahi", answer)
+        self.assertIn("nahi mili", answer)
 
     async def test_send_photo_to_a_person(self):
         h = self.h
         sent = []
 
-        async def send(account_id, target, data, caption="", owner_id=None, filename="photo.jpg", as_file=False):
-            sent.append((account_id, target, data, caption))
+        async def send(account_id, target, data, caption="", owner_id=None, filename="file", kind="document"):
+            sent.append((account_id, target, data, caption, kind))
 
-        h.manager.send_photo_on_account = send
+        h.manager.send_media_on_account = send
         await h.send_photo(OWNER, b"IMG")
         self.gemini(call("send_photo", accounts=["Amit"], target="@rahulk1", caption="Ye dekho"), say("Ijazat chahiye."))
         update = await h.say(OWNER, "Amit se @rahulk1 ko ye photo bhejo")
-        self.assertIn("Send the uploaded picture", update.effective_message.replies[-1][0])
+        self.assertIn("Send the uploaded photo", update.effective_message.replies[-1][0])
         await h.tap(OWNER, f"aia|ok|{_token(update.effective_message.replies[-1][1])}")
-        self.assertEqual(sent, [(self.b["id"], "@rahulk1", b"IMG", "Ye dekho")])
+        self.assertEqual(sent, [(self.b["id"], "@rahulk1", b"IMG", "Ye dekho", "photo")])
 
 
 # --- chats: seen, mute, archive --------------------------------------------------------------------------------------
