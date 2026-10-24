@@ -1,4 +1,4 @@
-"""The picture an admin sent to the bot, kept for the AI's tools (profile photo, send to somebody).
+"""The picture / video / voice message / file an admin sent to the bot, kept for the AI's tools (profile photo, send to somebody).
 
 Lives in the admin's own ``user_data`` (memory only, never saved), is forgotten after an hour and is replaced
 by the next picture. The AI never sees the picture itself, only a note that one is waiting."""
@@ -13,12 +13,17 @@ from telegram_manager.constants import MAX_UPLOAD_BYTES, UPLOAD_TTL_SECONDS
 MEDIA_KEY = "ai_media"
 
 
-def keep(user_data: dict, data: bytes, name: str = "photo.jpg", as_file: bool = False, caption: str = "") -> dict[str, Any]:
+KINDS = ("photo", "video", "voice", "audio", "document")
+
+
+def keep(user_data: dict, data: bytes, name: str = "photo.jpg", as_file: bool = False, caption: str = "", kind: str = "photo") -> dict[str, Any]:
     if not data:
         raise ValueError("The picture is empty.")
     if len(data) > MAX_UPLOAD_BYTES:
-        raise ValueError("That picture is too big (max 10 MB).")
-    item = {"id": secrets.token_hex(3), "data": bytes(data), "name": name or "photo.jpg", "as_file": bool(as_file),
+        raise ValueError("That file is too big (max 20 MB).")
+    if kind not in KINDS:
+        raise ValueError("Unsupported kind of file.")
+    item = {"id": secrets.token_hex(3), "kind": kind, "data": bytes(data), "name": name or "photo.jpg", "as_file": bool(as_file),
             "caption": (caption or "")[:900], "at": time.time()}
     user_data[MEDIA_KEY] = item
     return item
@@ -38,7 +43,14 @@ def current(user_data: dict) -> dict[str, Any] | None:
 def need(user_data: dict) -> dict[str, Any]:
     item = current(user_data)
     if item is None:
-        raise ValueError("Koi photo nahi mili: pehle admin se photo bhejne ko kaho (is chat mein photo bhejein), phir yeh tool chalao.")
+        raise ValueError("Koi photo ya file nahi mili: pehle admin se photo / video / file is chat mein bhejne ko kaho, phir yeh tool chalao.")
+    return item
+
+
+def need_photo(user_data: dict) -> dict[str, Any]:
+    item = need(user_data)
+    if item["kind"] != "photo":
+        raise ValueError(f"The uploaded file is a {item['kind']}, not a picture: a profile photo needs a photo.")
     return item
 
 
@@ -47,5 +59,5 @@ def note(user_data: dict) -> str:
     item = current(user_data)
     if item is None:
         return ""
-    return (f"UPLOADED PICTURE: the admin sent you a picture ({len(item['data']) // 1024} KB, {item['name']}). "
-            "set_profile_photo puts it on accounts as their profile photo; send_photo sends it to a chat. You cannot see it.")
+    return (f"UPLOADED FILE: the admin sent you a {item['kind']} ({len(item['data']) // 1024} KB, {item['name']}). "
+            "send_photo sends it to a chat (any kind); set_profile_photo and group_settings photo (photos only) use it as a picture. You cannot see or hear it.")
