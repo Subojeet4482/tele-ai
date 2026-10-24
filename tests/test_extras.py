@@ -296,13 +296,18 @@ class ImportTests(unittest.IsolatedAsyncioTestCase):
         await self.h.send_txt(OWNER, f"777:{API_HASH}:{SESSION_A}")
         self.assertEqual(self.connected[0][1:3], (777, API_HASH))
 
-    async def test_other_file_types_are_ignored(self):
+    async def test_other_file_types_are_never_read_as_sessions_but_kept_for_the_ai(self):
         from tests.fakes import FakeUpdate
+        from tests.harness import _fake_get_file
 
         update = FakeUpdate(OWNER, text=None)
-        update.effective_message.document = SimpleNamespace(file_size=10, file_name="photo.pdf", mime_type="application/pdf")
+        update.effective_message.document = SimpleNamespace(
+            file_size=10, file_name="price.pdf", mime_type="application/pdf", get_file=_fake_get_file(b"%PDF-1.4 data"))
         await self.h._run(OWNER, update, self.h.parts.extras.txt_input)
-        self.assertEqual((update.effective_message.replies, self.connected), ([], []))
+        self.assertEqual(self.connected, [])  # nothing is imported
+        self.assertIn("File mil gayi", update.effective_message.replies[-1][0])
+        item = self.h.ctx(OWNER).user_data["ai_media"]
+        self.assertEqual((item["kind"], item["name"], item["as_file"], item["data"]), ("document", "price.pdf", True, b"%PDF-1.4 data"))
 
     async def test_a_stranger_cannot_import(self):
         update = await self.h.send_txt(STRANGER, SESSION_A)
