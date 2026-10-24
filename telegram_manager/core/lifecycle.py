@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Any
 
+from telegram_manager.core.proxy import uses_proxy
 from telegram_manager.crypto import SecretDecryptError
 from telegram_manager.errors import describe_error
 
@@ -53,14 +54,19 @@ class LifecycleMixin:
         except SecretDecryptError as exc:
             self._dead_accounts[account_id] = str(exc)
             raise
+        proxied = uses_proxy(account)
         try:
-            client = self._new_client(session_string, int(account["api_id"]), api_hash)
+            if proxied:  # connected already: tries its proxies in turn (core/proxy.py)
+                client = await self._connect_via_proxies(account, session_string, int(account["api_id"]), api_hash)
+            else:
+                client = self._new_client(session_string, int(account["api_id"]), api_hash)
         except ValueError as exc:
             # A malformed saved session can never work; do not retry it every minute.
             self._dead_accounts[account_id] = f"the saved session is not valid ({describe_error(exc)})"
             raise
         try:
-            await self._connect_client(client)
+            if not proxied:
+                await self._connect_client(client)
             authorized = await self._request(client.is_user_authorized())
         except BaseException:
             await self._safe_disconnect(client)
