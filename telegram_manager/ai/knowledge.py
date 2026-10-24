@@ -21,7 +21,7 @@ HOW THIS BOT WORKS (you know it all; use it, do not guess):
 • Channels and groups: list_my_chats (owned_only), create_channel, edit_chat (title / about), delete_channel (only the owner account can; for everybody; always asks), delete_chat only leaves.
 • Bots, pictures, chats: start_bot (switch a bot on by @name or t.me link with ?start= payload; joins 'join first' channels and presses Verify), search_public (find a public channel / group / bot by name), join_chat, account_info (FULL phone number, id, Premium, bio on the admin's screen), chat_control (read = mark SEEN, unread, mute, unmute, archive, unarchive), set_profile_photo / send_photo (use the picture the admin uploaded to this chat).
 • Your own settings and prompt: get_ai_settings, change_ai_settings, edit_prompt. Keys are secret: you can only count them (list_ai_keys).
-• Big or rare topics: call panel_guide(topic) first. Topics: accounts, sending, broadcasts, forwarding, ai_chats, health, admins, start_screen, modes, security, channels, bots_media.
+• Big or rare topics: call panel_guide(topic) first. Topics: accounts, sending, broadcasts, forwarding, ai_chats, health, admins, start_screen, modes, security, channels, bots_media, proxies, actions.
 • Style: answer in the admin's language and tone (Hinglish if they write Hinglish), short and calm. Ask with ask_user only when something is really unclear. Never invent numbers, names or results."""
 
 TOPICS: dict[str, str] = {
@@ -62,6 +62,21 @@ join_chat reports per account: joined, already in, or request sent (the group ad
 account_info shows id, full phone, @username, Premium and bio to the admin; you only know the masked number, so never type a phone number yourself.
 chat_control(accounts, target, action): read marks the chat seen (blue ticks) without writing anything. unread, mute, unmute, archive, unarchive. Nothing is sent, so it runs at once.
 Pictures: the admin sends a photo to this chat (a caption can be the instruction). set_profile_photo puts it on the named accounts; send_photo sends it to a chat. You cannot see the picture. With no picture waiting, ask the admin to send one. Sessions: list_sessions / terminate_sessions; a NEW login is add_account (the admin enters the code; you never see it).""",
+    "proxies": """\
+Proxies: a .txt sent to the bot (one per line: socks5://user:pass@host:port, http://host:port, host:port, host:port:user:pass, tg://proxy?server=..&port=..&secret=.. MTProxy) is saved by the bot at once; a caption like "http" or "socks4" sets the type of bare host:port lines. proxy_add does the same for text pasted in chat.
+proxy_list shows number, type, host:port, test result and who uses what. proxy_test opens a real Telegram connection through each proxy (up to 40) and reports speed or the error. proxy_remove deletes by number, all or dead.
+proxy_use(accounts, proxy): auto = the account's proxy first, and when it fails the next working one (up to 4 tries per connect; a failed proxy rests 5 minutes; the watchdog moves a dropped account to another proxy). A number pins one proxy (retried twice, then offline). off = direct. A failed switch never takes a working account offline. Never silently falls back to direct: that would show the admin's real IP.
+Needs the python-socks package for socks / http proxies (in requirements.txt).
+Two pools, kept apart: manual (typed, pasted or a .txt) and URL (fetched from a proxy link; the built-in link works with no setup). proxy_refresh fetches the link now; proxy_source(url, use) changes the link or whether accounts rotate through both / manual / url proxies. The /proxy screen has all of this as buttons.
+proxy_give(count, source, scheme): hands proxies to the admin on request. Up to 20 are a chat message, MORE than 20 are sent as a .txt file. source url (default, a fresh list from the link) / manual (only ones without a login) / all. The list goes straight to the admin's screen; you never see or retype it. Proxies with a password are never given.
+temp_mail(action): new / show / inbox. A 1secmail address is shown with a 📥 Get OTP / Inbox button (also /tempmail); the admin taps Get after the mail was sent, the bot looks at the inbox and sends the OTP. You never see the OTP.""",
+    "actions": """\
+message_action(account, target, action, message, text, to): edit (own message), reply, forward, pin, unpin, delete (for everybody; always asks). message = an id, 'last' (my newest) or 'last_incoming'. search_messages(account, target, query) shows matches with ids.
+group_members: list (30), add (max 10 @usernames), kick, ban, unban, promote (no right to add admins), demote. All but list always ask. Only works where the account is allowed to do it; Telegram's own error is reported.
+group_settings: invite_link, revoke_link, slowmode (0/10/30/60/300/900/3600 s), lock / unlock (only admins write), photo (the uploaded picture), approve_requests, auto_delete (off/1d/1w/1m).
+contacts: list / add (phone + first name) / delete. account_settings: auto_delete_default, self_destruct (90/180/365 days only).
+send_photo sends the uploaded picture, video, voice message, audio or file; the admin sends it to the bot first (a caption is taken as the instruction; max 20 MB).
+Not possible: understanding what is IN a picture / voice / video, secret chats, calls and voice chats, stories, chat folders, Stars / gifts, mini apps, solving captchas, reading OTPs.""",
     "modes": """\
 AI mode: the admin just writes and you act. Manual mode: the full button panel (plain text is not sent to you there). Your confirm mode asks ✅/❌ before risky actions; auto mode does them at once. Changing your own prompt, giving accounts away, removing an admin and logging an account out ALWAYS ask, in both. Questions to the admin go through ask_user buttons.""",
 }
