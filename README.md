@@ -51,6 +51,46 @@ Open `🔐 Account security` (`/security`) → pick an account. The same things 
 
 **AI chats talk like a person.** A private AI chat no longer uses the panel-manager prompt: it chats like a normal person in the other person's language, asks "kya matlab?" when it does not understand instead of guessing, never names its owner, never asks for OTP / passwords / money, and if somebody sincerely asks whether it is an AI it answers truthfully. The person's message is **marked seen before the answer is written**. A second AI chat with the same person is refused (it is already running), and the same approval card is never shown twice.
 
+### 🌐 Proxies (list from a .txt, retry, failover)
+
+Send the bot a **.txt with one proxy per line** (or paste them in the chat). Accepted: `socks5://user:pass@host:port`, `http://host:port`, `socks4://…`, `host:port`, `host:port:user:pass`, `user:pass@host:port`, and MTProxy `tg://proxy?server=…&port=…&secret=…`. A caption such as `http` or `socks4` sets the type of bare `host:port` lines (default socks5). Passwords and MTProxy secrets are stored **encrypted** and never shown to you or the AI.
+
+| Say | What happens | Tool |
+|---|---|---|
+| "proxy list dikhao" | Number, type, host:port, last test result, who uses what | `proxy_list` |
+| "proxy test karo" | A real Telegram connection through each proxy (no login), speed or error; failed ones rest 5 minutes | `proxy_test` |
+| "sab accounts proxy use karo" | `auto`: the account's proxy first, and if it fails the **next working one** (up to 4 tries per connect). Also when a connection drops later, the watchdog moves the account to another proxy. | `proxy_use` |
+| "Rahul ko proxy 3 pe lagao" · "Rahul ko direct karo" | Pin one proxy (retried twice) or go back to direct | `proxy_use` |
+| "kharab proxy hata do" | Delete by number, `all` or `dead` | `proxy_remove` |
+
+A switch connects the new connection first and only then drops the old one, so a bad proxy never takes a working account offline. When every proxy fails the account stays offline and is retried by the watchdog; it **never falls back to a direct connection by itself** (that would show your real IP). Socks and http proxies need `python-socks` (already in `requirements.txt`).
+
+### 🌐 Proxy URL · 🎁 give proxies · 📧 Temp Mail · 🔀 instant AI / Manual switch
+
+Open **🌐 Proxies** (`/proxy`, the bottom keyboard, ⚙️ Menu or ⚙️ Settings).
+
+- **Two separate pools.** ✋ *Manual* = proxies you type, paste or send as a .txt. 🔗 *From URL* = fetched from a proxy link. They are counted and handled apart; **🔀 Accounts use** switches the account rotation between *Manual + URL* · *Manual only* · *URL only*.
+- **The URL works with no setup.** The built-in link is `https://proxy-api-zfat.onrender.com/get?type=http&sec=2&count=100`. 🔄 *Refresh URL list* (or `/proxyurl`) adds the new proxies and drops URL proxies that left the list (never manual ones, never one an account is pinned to). 🔗 *Change URL* (or `/proxyurl <link>`; `default` resets it) accepts any link that answers with one proxy per line or JSON. If you put accounts on **Auto** while the pool is empty, the link is fetched by itself.
+- **Giving proxies away.** `🎁 Get 10 / 20 / 50 / 100`, `/getproxy [number] [http|socks5|socks4] [url|manual|all]`, or just tell the AI (“50 proxy do”, tool `proxy_give`). A fresh list is fetched from the link for that number. **Up to 20 arrive as a chat message (tap to copy); more than 20 arrive as a `.txt` file.** Manual proxies with a login or secret are never handed out. The AI only learns *how many* were sent, never the proxies.
+- **Buttons on the proxy screen:** 🎁 Get · ✋ My manual list · 🔄 Refresh URL list · ➕ Add manual · 🔗 Change URL · 🧪 Test · 🗑 Remove dead · 🔀 Accounts use · 🚀 Accounts → Auto proxy · ⛔ Accounts → Direct · 🗑 Clear URL list.
+
+**📧 Temp Mail** (`/tempmail`, the bottom keyboard, or tell the AI “temp mail do”, tool `temp_mail`) uses **1secmail**: you get an address (tap to copy) with **📥 Get OTP / Inbox** under it. Use the address on a site, then tap Get: the bot looks at the inbox (a few times if it is still empty), finds the code and sends it as a message (`🔑 OTP: 482913`). A mail without a code is shown as text. The button always moves to the newest message, so Get is at the bottom of the chat. 🔄 *New mail* makes another address. The same mail is never sent twice. The OTP is never shown to the AI.
+
+**🔀 Instant switch.** The bottom keyboard ends with one button: in Manual mode **🤖 AI Mode**, in AI mode **🖐 Manual Mode** next to ⚙️ Menu. Same as `/aimode` and `/manual`.
+
+### 🧰 More Telegram actions through the AI
+
+| Say | Tool |
+|---|---|
+| "mera aakhri message edit karo" · "unke message ko reply karo" · forward · pin / unpin · delete (always asks) | `message_action`, `search_messages` (finds ids) |
+| Send a **video / voice message / audio / file (up to 20 MB)** to the bot, then "isse Amit se @x ko bhejo" (a caption is the instruction) | `send_photo` (any kind) |
+| "is group ke members dikhao" · add (max 10) / kick / ban / unban / make admin / remove admin (all ask first; an admin made this way cannot appoint admins) | `group_members` |
+| "invite link banao" · slow mode · only admins write / everybody writes · group photo (upload one first) · approve join requests · auto-delete | `group_settings` |
+| "contacts dikhao / save karo / hatao" | `contacts` |
+| New chats auto-delete (1d / 1w / 1m) · account self-destruct 90 / 180 / 365 days (always asks) | `account_settings` |
+
+**Not possible (on purpose or because it needs an outside service):** understanding what is *in* a picture, voice or video, secret chats, calls and voice chats, stories, chat folders, Stars / gifts, mini apps, captchas, polls, reading OTPs, changing or deleting an account's number, and mass-adding or scraping members.
+
 **Passwords never go through the AI.** For 2FA the AI only opens a form; you type the password(s) there, the message is deleted at once and goes straight to Telegram (never to Gemini, the log or the database). Ending devices, deleting channels and changing 2FA **always ask for your ✅ first, even in ⚡ Auto mode**. Telegram refuses to end other devices for a few hours after the bot's own session was created; the bot says so.
 
 **Questions come as buttons.** When the AI needs a choice (which account, which person, yes/no) it shows tap buttons instead of a text question, and your tap goes straight back to it. In ✋ Confirm mode every risky action also waits for ✅ / ❌.
