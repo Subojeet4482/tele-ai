@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import logging
 
-from telegram_manager.ai import media as ai_media
 from telegram_manager.bot.handlers.base import HandlerBase
+from telegram_manager.constants import MAX_UPLOAD_BYTES
 from telegram_manager.errors import describe_error, explain_send_error
 
 logger = logging.getLogger(__name__)
@@ -47,39 +47,35 @@ class TextHandlers(HandlerBase):
         if state is not None:  # inside a flow: only a step that asks for a picture takes it, anything else is ignored as before
             await self.engine.on_photo(update, context, data, getattr(source, "file_id", None))
             return
-        await self._photo_for_ai(update, context, message, source, data)
-
-    async def _photo_for_ai(self, update, context, message, source, data: bytes) -> None:
-        """A picture outside any flow: kept for the AI's tools (profile photo / send to somebody). A caption is the instruction."""
-        ai = getattr(self, "ai", None)
-        if ai is None or await ai.ui_mode(self.uid(update)) == "manual":
-            return  # Manual mode: pictures are only for flows, as before
         is_file = not getattr(message, "photo", None)
-        name = (getattr(source, "file_name", None) or "photo.jpg") if is_file else "photo.jpg"
-        caption = (getattr(message, "caption", None) or "").strip()
-        try:
-            ai_media.keep(context.user_data, data, name, as_file=is_file)
-        except ValueError as exc:
-            await message.reply_text(f"❌ {exc}")
-            return
-        if caption:
-            if await ai.ask(update, context, caption):
-                return
-            await ai.not_answered(update, await ai.ui_mode(self.uid(update)))
-            return
-        await message.reply_text("📸 Photo mil gayi. Ab bolo isse kya karna hai: profile photo lagana (kaun sa account?), ya kisi ko bhejna (kisko?).")
+        await self.upload_for_ai(update, context, data, "photo", (getattr(source, "file_name", None) or "photo.jpg") if is_file else "photo.jpg", as_file=is_file)
 
     async def media_input(self, update, context) -> None:
-        """A GIF or a video sent to the bot: only used by a step that asks for one (the start screen)."""
+        """A GIF, video, voice message or audio sent to the bot: a flow step that asks for a GIF / video takes it
+        (the start screen); outside a flow it is kept for the AI's tools (send it to somebody)."""
         if not await self._allowed(update, context):
             return
         message = update.effective_message
-        animation = getattr(message, "animation", None)
-        video = getattr(message, "video", None)
-        kind, source = ("animation", animation) if animation else ("video", video)
+        found = [(kind, getattr(message, attr, None)) for attr, kind in
+                 (("animation", "animation"), ("video", "video"), ("video_note", "video"), ("voice", "voice"), ("audio", "audio"))]
+        kind, source = next(((k, v) for k, v in found if v is not None), (None, None))
         if source is None:
             return
-        await self.engine.on_media(update, context, kind, source.file_id)
+        if self.engine.active(context) is not None:
+            if kind in ("animation", "video"):
+                await self.engine.on_media(update, context, kind, source.file_id)
+            return
+        if getattr(source, "file_size", 0) and source.file_size > MAX_UPLOAD_BYTES:
+            await message.reply_text("❌ That file is too big. A bot can take up to 20 MB.")
+            return
+        try:
+            data = bytes(await (await source.get_file()).download_as_bytearray())
+        except Exception as exc:
+            await message.reply_text(f"❌ Could not read that file: {describe_error(exc)}")
+            return
+        defaults = {"animation": "video.mp4", "video": "video.mp4", "voice": "voice.ogg", "audio": "audio.mp3"}
+        await self.upload_for_ai(update, context, data, "video" if kind == "animation" else kind,
+                                 getattr(source, "file_name", None) or defaults[kind])
 
     async def custom_emoji_input(self, update, context) -> None:
         """An admin sends a message with custom emoji: tell them the IDs (for BUTTON_ICONS)."""
