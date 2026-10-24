@@ -14,6 +14,8 @@ exp|multi              export several accounts' sessions at once, as a .txt file
 expr|<token>           owner/admin taps Revoke on a "a session was exported" notification
 sc|home|text|photo|rmphoto|reset|preview|pub   start screen settings
 mode|ai|manual|choose  the two modes picked on /start (AI = just write, Manual = the buttons)
+px|home|get|gm|ref|add|url|test|clean|use|acc|go|clrurl   proxy screen (give, refresh, manual, URL, accounts)
+tm|home|get|new        temp mail (1secmail): address, 📥 Get OTP / Inbox, new address
 aiq|<token>|<n>        a button the AI asked as a question (its tap goes back to the AI)
 ex|start               public session export (anybody); help = all commands as buttons
 wz|<wizard>|<action>|<arg>   inside step-by-step flows (see bot/wizard)
@@ -155,6 +157,7 @@ def start_keyboard(is_owner: bool) -> Markup:
         [Btn("🎁 Give accounts", callback_data="give|start"), Btn("📤 Export session", callback_data="exp|pick")],
         [Btn("📦 Export multiple (.txt)", callback_data="exp|multi")],
         [Btn("🕒 Daily broadcasts", callback_data="sched|home"), Btn("🎨 Start screen", callback_data="sc|home")],
+        [Btn("🌐 Proxies", callback_data="px|home", style="primary"), Btn("📧 Temp Mail", callback_data="tm|home", style="primary")],
         [Btn("🚪 Logout account", callback_data="logout")],
     ]
     if is_owner:
@@ -185,6 +188,7 @@ def help_keyboard(is_owner: bool) -> Markup:
         [Btn("📦 Export multiple", callback_data="exp|multi")],
         [Btn("🎨 /startscreen", callback_data="sc|home"), Btn("🔗 Connect", callback_data="connect")],
         [Btn("🤖 /aisettings", callback_data="ai|home")],
+        [Btn("🌐 /proxy", callback_data="px|home", style="primary"), Btn("📧 /tempmail", callback_data="tm|home", style="primary")],
     ]
     if is_owner:
         rows.append([Btn("👑 Admins", callback_data="adm|home"), Btn("📜 /logs", callback_data="logs|link")])
@@ -205,6 +209,7 @@ def menu_keyboard(is_owner: bool) -> Markup:
         [Btn("📋 My accounts", callback_data="acc_list"), Btn("🔄 Refresh names", callback_data="acc_refresh")],
         [Btn("🎁 Give accounts", callback_data="give|start"), Btn("📤 Export session", callback_data="exp|pick")],
         [Btn("📦 Export multiple (.txt)", callback_data="exp|multi")],
+        [Btn("🌐 Proxies", callback_data="px|home", style="primary"), Btn("📧 Temp Mail", callback_data="tm|home", style="primary")],
         [Btn("🎨 Start screen", callback_data="sc|home"), Btn("📖 All commands", callback_data="help")],
         [Btn("🤖 AI manager", callback_data="ai|home")],
     ]
@@ -212,6 +217,34 @@ def menu_keyboard(is_owner: bool) -> Markup:
         rows.append([Btn("📜 Live logs", callback_data="logs|link")])
     rows.append([Btn("⬅️ Back", callback_data="home")])
     return _markup(rows)
+
+
+def proxy_hub(use: str = "both") -> Markup:
+    """The proxy screen: give proxies away, refresh the URL list, manual proxies, which pool accounts use."""
+    use_label = {"both": "🔀 Accounts use: Manual + URL", "manual": "🔀 Accounts use: Manual only", "url": "🔀 Accounts use: URL only"}.get(use, "🔀 Accounts use: Manual + URL")
+    return _markup([
+        [Btn("🎁 Get 10", callback_data="px|get|10"), Btn("🎁 Get 20", callback_data="px|get|20")],
+        [Btn("📄 Get 50 (file)", callback_data="px|get|50"), Btn("📄 Get 100 (file)", callback_data="px|get|100")],
+        [Btn("✋ My manual list", callback_data="px|gm"), Btn("🔄 Refresh URL list", callback_data="px|ref")],
+        [Btn("➕ Add manual", callback_data="px|add"), Btn("🔗 Change URL", callback_data="px|url")],
+        [Btn("🧪 Test", callback_data="px|test"), Btn("🗑 Remove dead", callback_data="px|clean")],
+        [Btn(use_label, callback_data="px|use")],
+        [Btn("🚀 Accounts → Auto proxy", callback_data="px|acc|auto", style="success"), Btn("⛔ Accounts → Direct", callback_data="px|acc|off")],
+        [Btn("🗑 Clear URL list", callback_data="px|clrurl")],
+        [Btn("⬅️ Back", callback_data="menu")],
+    ])
+
+
+def proxy_after_give(count: int) -> Markup:
+    return _markup([[Btn("🔁 Naye proxies", callback_data=f"px|get|{count}"), Btn("🌐 Proxies", callback_data="px|home")]])
+
+
+def tempmail_keyboard() -> Markup:
+    """Under every temp-mail message: Get checks the inbox (and sends the OTP), New makes another address."""
+    return _markup([
+        [Btn("📥 Get OTP / Inbox", callback_data="tm|get", style="success")],
+        [Btn("🔄 New mail", callback_data="tm|new"), Btn("⚙️ Menu", callback_data="menu")],
+    ])
 
 
 def connect_keyboard() -> Markup:
