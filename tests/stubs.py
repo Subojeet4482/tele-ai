@@ -94,25 +94,32 @@ def install() -> None:
     errors = _module("telethon.errors", **{name: type(name, (Exception,), {}) for name in error_names})
     _module("telethon", TelegramClient=_Client, errors=errors, events=types.SimpleNamespace(NewMessage=_NewMessage))
     _module("telethon.sessions", StringSession=lambda value="": value)
+    _module("telethon.network")
+    _module("telethon.network.connection")
+    _module("telethon.network.connection.tcpmtproxy", ConnectionTcpMTProxyRandomizedIntermediate=type("ConnectionTcpMTProxyRandomizedIntermediate", (), {}))
     _module("telethon.tl")
     _module("telethon.tl.functions")
     def _requests(module: str, *names: str) -> None:
         _module(module, **{name: type(name, (_Any,), {}) for name in names})
 
-    _requests("telethon.tl.functions.contacts", "BlockRequest", "UnblockRequest", "GetBlockedRequest", "SearchRequest")
+    _requests("telethon.tl.functions.contacts", "BlockRequest", "UnblockRequest", "GetBlockedRequest", "SearchRequest",
+              "GetContactsRequest", "ImportContactsRequest", "DeleteContactsRequest")
     _requests("telethon.tl.functions.users", "GetFullUserRequest")
     _requests("telethon.tl.functions.messages", "SendReactionRequest", "ImportChatInviteRequest", "DeleteChatRequest",
-              "EditChatAboutRequest", "EditChatTitleRequest", "StartBotRequest", "MarkDialogUnreadRequest")
+              "EditChatAboutRequest", "EditChatTitleRequest", "StartBotRequest", "MarkDialogUnreadRequest", "AddChatUserRequest", "ExportChatInviteRequest",
+              "EditExportedChatInviteRequest", "HideAllChatJoinRequestsRequest", "SetHistoryTTLRequest", "SetDefaultHistoryTTLRequest",
+              "EditChatPhotoRequest")
     _requests("telethon.tl.functions.channels", "JoinChannelRequest", "DeleteChannelRequest", "CreateChannelRequest",
-              "EditTitleRequest", "UpdateUsernameRequest", "GetParticipantRequest")
+              "EditTitleRequest", "UpdateUsernameRequest", "GetParticipantRequest", "InviteToChannelRequest",
+              "ToggleSlowModeRequest", "EditPhotoRequest")
     _requests("telethon.tl.functions.account", "UpdateProfileRequest", "UpdateUsernameRequest", "GetPasswordRequest",
-              "GetAuthorizationsRequest", "ResetAuthorizationRequest", "SetPrivacyRequest", "UpdateNotifySettingsRequest")
+              "GetAuthorizationsRequest", "ResetAuthorizationRequest", "SetPrivacyRequest", "UpdateNotifySettingsRequest", "SetAccountTTLRequest")
     _requests("telethon.tl.functions.photos", "UploadProfilePhotoRequest", "DeletePhotosRequest")
     privacy = ("InputPrivacyKeyPhoneNumber InputPrivacyKeyStatusTimestamp InputPrivacyKeyProfilePhoto InputPrivacyKeyAbout "
                "InputPrivacyKeyChatInvite InputPrivacyKeyPhoneCall InputPrivacyKeyForwards InputPrivacyValueAllowAll "
                "InputPrivacyValueAllowContacts InputPrivacyValueDisallowAll").split()
     _module("telethon.tl.types", ReactionEmoji=_Any, Channel=type("Channel", (), {}), InputDialogPeer=_Any, InputNotifyPeer=_Any,
-            InputPeerNotifySettings=_Any,
+            InputPeerNotifySettings=_Any, InputChatUploadedPhoto=_Any, InputPhoneContact=_Any, AccountDaysTTL=_Any,
             **{name: type(name, (_Any,), {}) for name in privacy})
     _module("telethon.utils", get_input_photo=lambda photo: photo)
 
