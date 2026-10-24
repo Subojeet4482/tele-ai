@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from telegram_manager.ai import media as ai_media
 from telegram_manager.bot import keyboards, ui
 
 
@@ -59,3 +60,26 @@ class HandlerBase:
         """The part after the first | in the tapped button's data."""
         data = update.callback_query.data or ""
         return data.split("|", 1)[1] if "|" in data else ""
+
+    _KIND_WORDS = {"photo": "📸 Photo", "video": "🎬 Video", "voice": "🎤 Voice message", "audio": "🎵 Audio", "document": "📎 File"}
+
+    async def upload_for_ai(self, update, context, data: bytes, kind: str, name: str, as_file: bool = False) -> None:
+        """A picture / video / voice / file sent outside any flow: kept for the AI's tools (profile photo, send to somebody).
+        A caption is taken as the instruction and goes straight to the AI. Manual mode ignores it (as before)."""
+        ai = getattr(self, "ai", None)
+        message = update.effective_message
+        if ai is None or await ai.ui_mode(self.uid(update)) == "manual":
+            return
+        try:
+            ai_media.keep(context.user_data, data, name, as_file=as_file, kind=kind)
+        except ValueError as exc:
+            await message.reply_text(f"❌ {exc}")
+            return
+        caption = (getattr(message, "caption", None) or "").strip()
+        if caption:
+            if await ai.ask(update, context, caption):
+                return
+            await ai.not_answered(update, await ai.ui_mode(self.uid(update)))
+            return
+        await message.reply_text(f"{self._KIND_WORDS[kind]} mil gayi. Ab bolo isse kya karna hai: "
+                                 + ("profile photo lagana (kaun sa account?), ya kisi ko bhejna (kisko?)." if kind == "photo" else "kisko bhejna hai, aur kaun se account se?"))
