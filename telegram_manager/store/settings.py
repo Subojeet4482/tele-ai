@@ -61,6 +61,33 @@ class SettingsStore:
             raise ValueError(f"Unknown forwarding setting: {name}")
         await self._write(owner_id, {name: bool(value)})
 
+    # --- proxies: the admin's pool (passwords / secrets are stored encrypted) -------------------------------------
+    async def get_proxies(self, owner_id: int) -> list[dict]:
+        value = (await self._data(owner_id)).get("proxies")
+        return [dict(row) for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+    async def set_proxies(self, owner_id: int, proxies: list[dict]) -> None:
+        await self._write(owner_id, {"proxies": proxies})
+
+    async def get_proxy_source(self, owner_id: int) -> dict:
+        """{"url", "use", "fetched_at", "last_count"}: where the URL proxies come from (missing = defaults)."""
+        value = (await self._data(owner_id)).get("proxy_source")
+        return dict(value) if isinstance(value, dict) else {}
+
+    async def set_proxy_source(self, owner_id: int, **values) -> None:
+        current = await self.get_proxy_source(owner_id)
+        current.update(values)
+        await self._write(owner_id, {"proxy_source": current})
+
+    # --- temp mail (1secmail): the admin's current mailbox ------------------------------------------------------
+    async def get_tempmail(self, owner_id: int) -> dict:
+        """{"address", "created", "seen": [message ids already shown]} or {}."""
+        value = (await self._data(owner_id)).get("tempmail")
+        return dict(value) if isinstance(value, dict) else {}
+
+    async def set_tempmail(self, owner_id: int, data: dict) -> None:
+        await self._write(owner_id, {"tempmail": data})
+
     async def get_api_creds(self, owner_id: int) -> dict | None:
         """{"api_id": int, "api_hash_enc": str} saved with /setapi, or None."""
         data = await self._data(owner_id)
