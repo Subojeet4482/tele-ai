@@ -7,8 +7,9 @@ from contextlib import suppress
 
 from telegram_manager.bot import keyboards, ui
 from telegram_manager.bot.handlers.base import HandlerBase
-from telegram_manager.constants import BULK_DELAY_MAX, OPEN_CHAT_MIN_DELAY
+from telegram_manager.constants import BULK_DELAY_MAX, MAX_UPLOAD_BYTES, OPEN_CHAT_MIN_DELAY
 from telegram_manager.core.extras import UNSEND_MAX_MINUTES
+from telegram_manager.core.proxyparse import looks_like_proxy_file, parse_proxy_text
 from telegram_manager.errors import describe_error
 from telegram_manager.parsing import (
     looks_like_selector,
@@ -256,6 +257,22 @@ class ExtraHandlers(HandlerBase):
             _BACK,
         )
 
+    async def _save_proxy_file(self, update, text: str) -> None:
+        """A .txt with proxies (one per line): saved to the admin's pool. A caption like 'http' or 'socks4' sets the type of bare host:port lines."""
+        message = update.effective_message
+        caption = (getattr(message, "caption", "") or "").lower()
+        scheme = next((word for word in ("mtproxy", "socks4", "socks5", "http") if word in caption), "socks5")
+        try:
+            proxies, bad = parse_proxy_text(text, scheme)
+            result = await self.manager.proxy_add(self.uid(update), proxies)
+        except ValueError as exc:
+            await message.reply_text(f"❌ {exc}")
+            return
+        await message.reply_text(
+            f"🌐 {result['added']} proxy save hui ({result['duplicates']} pehle se thi, {bad} line proxy nahi thi). Pool: {result['total']}.\n"
+            "Ab bolo: “proxy test karo” ya “sab accounts proxy use karo”. Proxy fail hui to apne aap agli chalne wali try hogi."
+        )
+
     async def txt_input(self, update, context) -> None:
         """Any .txt an admin sends (while no step-by-step flow is waiting) is read as a list of sessions."""
         if not await self.guard.allow(update):
@@ -268,14 +285,27 @@ class ExtraHandlers(HandlerBase):
             return
         name = (getattr(document, "file_name", "") or "").lower()
         mime = (getattr(document, "mime_type", "") or "").lower()
-        if not (name.endswith(".txt") or mime == "text/plain"):
-            return  # only text files are read as session lists
+        if not (name.endswith(".txt") or mime == "text/plain"):  # any other file: kept for the AI to send somewhere
+            if getattr(document, "file_size", 0) and document.file_size > MAX_UPLOAD_BYTES:
+                await message.reply_text("❌ That file is too big. A bot can take up to 20 MB.")
+                return
+            try:
+                data = bytes(await (await document.get_file()).download_as_bytearray())
+            except Exception as exc:
+                await message.reply_text(f"❌ Could not read that file: {describe_error(exc)}")
+                return
+            await self.upload_for_ai(update, context, data, "document", getattr(document, "file_name", None) or "file", as_file=True)
+            return
         if getattr(document, "file_size", 0) and document.file_size > MAX_SESSION_FILE_BYTES:
             await message.reply_text("❌ That file is too big. Send a .txt under 1 MB.")
             return
         try:
             raw = bytes(await (await document.get_file()).download_as_bytearray())
-            lines, ignored = parse_session_file(raw.decode("utf-8", "replace"))
+            text = raw.decode("utf-8", "replace")
+            if looks_like_proxy_file(text):  # not sessions: a list of proxies
+                await self._save_proxy_file(update, text)
+                return
+            lines, ignored = parse_session_file(text)
         except ValueError as exc:
             await message.reply_text(f"❌ {exc}")
             return
