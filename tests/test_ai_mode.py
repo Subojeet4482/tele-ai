@@ -51,7 +51,7 @@ class ModeTests(Base):
         self.assertEqual((await self.ai()).ui_mode, "ai")
         _chat, markup = self.h.bot.keyboards[-1]
         shown = [b.text for row in markup.keyboard for b in row]
-        self.assertEqual(shown, ["⚙️ Menu"])  # AI mode: only the Menu button under the chat
+        self.assertEqual(shown, ["⚙️ Menu", "🖐 Manual Mode"])  # AI mode: Menu and the instant switch back to Manual
         self.assertNotIn("🔗 Connect Account", shown)
 
     async def test_manual_mode_opens_the_full_panel_and_quick_menu(self):
