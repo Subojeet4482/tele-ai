@@ -68,6 +68,12 @@ class WatchdogMixin:
                     await self._drop_dead_account(account_id, label, describe_error(exc), exc.__class__.__name__)
                 except Exception as exc:
                     logger.warning("Reconnect failed for %s: %s", label, describe_error(exc))
+                    if await self.proxy_failover(account_id):  # an account on proxies: move to the next working proxy
+                        logger.info("Account %s is back through another proxy", label)
+                        if account_id in self._offline_notified:
+                            self._offline_notified.discard(account_id)
+                            await self.notify(owner, f"🟢 {label} is back online (through another proxy).")
+                        continue
                     if account_id not in self._offline_notified:
                         self._offline_notified.add(account_id)
                         await self.notify(
