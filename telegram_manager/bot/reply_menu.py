@@ -33,21 +33,22 @@ LAYOUT: list[list[Item]] = [
     [Item("sendone", "💬 Message One", "primary"), Item("click", "🖱 Click Buttons", "primary")],
     [Item("daily", "🕒 Daily Broadcast", "primary"), Item("forwarding", "📥 Forwarding", "primary")],
     [Item("give", "🎁 Give Accounts", "primary"), Item("export", "📤 Export Session", "primary")],
+    [Item("proxies", "🌐 Proxies", "primary"), Item("tempmail", "📧 Temp Mail", "primary")],
     [Item("startscreen", "🎨 Start Screen", "primary"), Item("menu", "⚙️ Menu", "primary")],
     [Item("settings", "⚙️ Settings", "primary"), Item("security", "🔐 Security", "primary")],
     [Item("logout", "🚪 Logout", "danger"), Item("help", "📖 Help", "primary")],
     [Item("admins", "👑 Admins", "primary", True), Item("logs", "📜 Live Logs", "primary", True)],
+    [Item("to_ai", "🤖 AI Mode", "success")],  # the instant switch: one tap and plain messages go to the AI
 ]
-# AI mode keeps the chat clean: you just write, and only the Menu button sits below.
+# AI mode keeps the chat clean: you just write. Menu opens everything; the other button is the instant switch back to Manual.
 AI_LAYOUT: list[list[Item]] = [
-    [Item("menu", "⚙️ Menu", "primary")],
+    [Item("menu", "⚙️ Menu", "primary"), Item("to_manual", "🖐 Manual Mode", "success")],
 ]
 # Buttons of the older AI keyboard. Phones keep an old keyboard until a new one is sent, so taps on them still work.
 LEGACY_AI_ITEMS: list[Item] = [
     Item("ai_settings", "⚙️ AI Settings", "primary"),
     Item("ai_keys", "🔑 AI Keys", "primary"),
     Item("ai_new", "🧹 Nayi Baat", "primary"),
-    Item("to_manual", "🖐 Manual Mode", "primary"),
 ]
 ITEMS: dict[str, Item] = {item.key: item for item in (*(i for row in (*LAYOUT, *AI_LAYOUT) for i in row), *LEGACY_AI_ITEMS)}
 
@@ -102,6 +103,8 @@ class MenuButtons(HandlerBase):
             await p.commands.open_bulk(update, context, "click")
         elif key == "to_manual":
             await p.start.switch_mode(update, context, "manual")
+        elif key == "to_ai":
+            await p.start.switch_mode(update, context, "ai")
         else:
             handler = {
                 "connect": p.accounts.connect_menu,
@@ -122,6 +125,8 @@ class MenuButtons(HandlerBase):
                 "ai_new": p.ai.new_chat,
                 "settings": p.security.settings_command,
                 "security": p.security.security_command,
+                "proxies": p.utils.proxy_command,
+                "tempmail": p.utils.tempmail_command,
             }.get(key)
             if handler is not None:
                 await handler(update, context)
