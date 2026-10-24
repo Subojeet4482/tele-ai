@@ -72,6 +72,7 @@ class FakeMessage:
     def __init__(self, text=None, chat_id=1):
         self.text = text
         self.replies: list[tuple[str, object]] = []
+        self.documents: list[tuple] = []  # (file name, text, caption, markup) of reply_document calls
         self.deleted = False
         self.reply_to_message = None
         self.photo = None
@@ -83,6 +84,11 @@ class FakeMessage:
     async def reply_text(self, text, reply_markup=None, **kwargs):
         self.replies.append((text, reply_markup))
         return SimpleNamespace(message_id=next(_ids))  # like python-telegram-bot: the sent Message
+
+    async def reply_document(self, document=None, filename=None, caption=None, reply_markup=None, **kwargs):
+        content = document.decode("utf-8", "replace") if isinstance(document, (bytes, bytearray)) else document
+        self.documents.append((filename, content, caption, reply_markup))
+        return SimpleNamespace(message_id=next(_ids))
 
     async def delete(self):
         self.deleted = True
